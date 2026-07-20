@@ -136,11 +136,30 @@ Add to `~/.gemini/settings.json` (or project `.gemini/settings.json`):
 |---|---|
 | `list_projects` | List your GetStoreReady projects. |
 | `create_project` | Create a new project. Returns its id and editor URL. |
-| `upload_screenshots` | Upload raw app screenshots (base64), returns asset ids. |
+| `upload_screenshots` | Upload raw app screenshots — prefer a local file `path` (server reads it directly), `data` (base64) is a fallback. Returns asset ids. |
 | `list_templates` | List templates with your actual owned/locked state. |
-| `apply_template` | Apply a template by key, or `"random"` to pick any unlocked one. Optionally places uploaded screenshots into it in order. |
+| `apply_template` | Apply a template by key, or `"random"` to pick any unlocked one. See recommended flow below. |
+| `place_screenshot_image` | Place an uploaded asset into a screen that already exists on a project, by 1-based screen index. |
 | `update_listing` | Update store listing / ASO text (app name, subtitle, description, keywords, …) for one locale. |
 | `get_project` | Summary of a project — name, platforms, screen count, editor URL. |
+
+### Recommended flow
+
+If a project has an editor tab already open in the browser, this sequence
+shows progress live, without a manual refresh:
+
+1. `apply_template({ projectId, templateKey })` — **without** `assetIds`.
+   Applies instantly with the template's own placeholder content.
+2. `upload_screenshots({ images: [{ path: "/local/path/to/shot.png" }, ...] })`
+   — pass local file paths, not base64, so the image bytes never round-trip
+   through the tool-call protocol.
+3. `place_screenshot_image({ projectId, screenIndex, assetId })` once per
+   screen, using the asset ids from step 2. Each call updates that screen
+   live.
+
+Passing `assetIds` directly to `apply_template` still works and bundles
+everything into one call — simpler for small batches, but gives no
+incremental feedback and is less reliable for larger images.
 
 ## Local development
 
