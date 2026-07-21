@@ -1,10 +1,15 @@
-# getstoreready-mcp
+<p align="center">
+  <a href="https://getstoreready.com"><img src="logo.png" alt="GetStoreReady" width="320"></a>
+</p>
 
-MCP server for [GetStoreReady](https://getstoreready.com) — create projects,
+<h1 align="center">getstoreready-mcp</h1>
+
+<p align="center">MCP server for <a href="https://getstoreready.com">GetStoreReady</a> — create projects,
 upload screenshots, apply templates, edit screen designs, translate listings,
 export ZIPs, and more from an MCP-capable AI client (Claude, Cursor, Codex,
-Gemini, …).
+Gemini, …).</p>
 
+---
 ## 1. Get an API key
 
 Create one at **[getstoreready.com/profile/api-keys](https://getstoreready.com/profile/api-keys)**
