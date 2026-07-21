@@ -389,19 +389,25 @@ export function registerTools(server: McpServer): void {
   server.tool(
     'update_screen_text',
     'Update the marketing headline/body text on one screen (template text layer, not in-app UI text). ' +
-      'Use get_screens to find layerId values. Live-updates an open editor tab.',
+      'Preserves template highlight styling (italic accent, pill) when the layer uses runs — ' +
+      'call get_screens to see highlightStyle/templateHighlight. Optionally pass highlightPhrase ' +
+      'to control which word gets the accent (e.g. "workouts" or "#habits").',
     {
       projectId: z.string().min(1),
       screenIndex: z.number().int().min(1),
       layerId: z.string().min(1).describe('Text layer id from get_screens'),
       text: z.string().describe('New copy for this layer'),
+      highlightPhrase: z
+        .string()
+        .optional()
+        .describe('Word or #hashtag to highlight — auto-picked when omitted'),
       locale: z.string().min(2).optional(),
     },
-    async ({ projectId, screenIndex, layerId, text: newText, locale }) => {
+    async ({ projectId, screenIndex, layerId, text: newText, highlightPhrase, locale }) => {
       const { locale: loc, screenshots } = await fetchScreenshots(projectId, locale);
       const target = screenAtIndex(screenshots, screenIndex);
       const design = target.design ?? { layers: [] };
-      const next = setLayerText(design, layerId, newText);
+      const next = setLayerText(design, layerId, newText, highlightPhrase);
       await patchScreenshotDesign(target.id, next, loc);
       return text({
         screenIndex,
@@ -426,6 +432,7 @@ export function registerTools(server: McpServer): void {
           z.object({
             layerId: z.string().min(1),
             text: z.string(),
+            highlightPhrase: z.string().optional(),
           }),
         )
         .optional(),
@@ -439,7 +446,7 @@ export function registerTools(server: McpServer): void {
       let next = cloneDesign(target.design ?? { layers: [] });
       if (background) next = setBackground(next, background);
       for (const u of textUpdates ?? []) {
-        next = setLayerText(next, u.layerId, u.text);
+        next = setLayerText(next, u.layerId, u.text, u.highlightPhrase);
       }
       await patchScreenshotDesign(target.id, next, loc);
       return text({
@@ -468,6 +475,7 @@ export function registerTools(server: McpServer): void {
           z.object({
             layerId: z.string().min(1),
             text: z.string(),
+            highlightPhrase: z.string().optional(),
           }),
         )
         .optional()
@@ -483,7 +491,7 @@ export function registerTools(server: McpServer): void {
         let next = cloneDesign(shot.design ?? { layers: [] });
         if (background) next = setBackground(next, background);
         for (const u of textUpdates ?? []) {
-          next = setLayerText(next, u.layerId, u.text);
+          next = setLayerText(next, u.layerId, u.text, u.highlightPhrase);
         }
         await patchScreenshotDesign(shot.id, next, loc);
         updated.push(screenIndex);

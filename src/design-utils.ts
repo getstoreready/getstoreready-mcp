@@ -1,3 +1,5 @@
+import { applyTextPreservingStyle, detectHighlightHint, type HighlightStyleKind } from './styled-text.js';
+
 export interface RunLike {
   text: string;
   bg?: string;
@@ -76,6 +78,10 @@ export interface TextLayerInfo {
   layerId: string;
   text: string;
   entryId: string;
+  /** Template highlight pattern — update_screen_text preserves this automatically. */
+  highlightStyle: HighlightStyleKind;
+  /** Word/phrase that was highlighted in the template (e.g. "beautiful", "#tags"). */
+  templateHighlight?: string;
 }
 
 /** User-visible text layers on a screen (for MCP read/write). */
@@ -85,10 +91,13 @@ export function listTextLayers(design: DesignLike | null | undefined): TextLayer
   for (const layer of design.layers) {
     if (layer.type !== 'text') continue;
     const copy = layer.runs?.length ? runsPlain(layer.runs) : (layer.text ?? '');
+    const hint = detectHighlightHint(layer.runs);
     out.push({
       layerId: layer.id,
       text: copy,
       entryId: `layer:${layer.id}:text`,
+      highlightStyle: hint.style,
+      templateHighlight: hint.sourcePhrase,
     });
   }
   return out;
@@ -104,13 +113,23 @@ export function setLayerText(
   design: DesignLike,
   layerId: string,
   text: string,
+  highlightPhrase?: string,
 ): DesignLike {
   const next = cloneDesign(design);
   const layer = next.layers?.find((l) => l.id === layerId);
   if (!layer || layer.type !== 'text') {
     throw new Error(`Text layer "${layerId}" not found on this screen.`);
   }
-  layer.text = text;
-  delete layer.runs;
+
+  const source = design.layers?.find((l) => l.id === layerId);
+  const applied = applyTextPreservingStyle(
+    { text: source?.text, runs: source?.runs },
+    text,
+    highlightPhrase,
+  );
+  layer.text = applied.text;
+  if (applied.runs) layer.runs = applied.runs;
+  else delete layer.runs;
+
   return next;
 }

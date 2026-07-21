@@ -154,6 +154,21 @@ Add to `~/.gemini/settings.json`:
 |---|---|
 | `export_project` | Enqueue export, wait for ZIP, optionally save to a local path. |
 
+### Store push (Premium/Pro)
+
+Link credentials in the web UI first (`/projects/:id/settings`).
+
+| Tool | What it does |
+|---|---|
+| `get_app_store_link` | App Store Connect link status for a project. |
+| `preview_app_store_push` | Review ASC push plan, blockers, warnings, live-store diff. |
+| `push_to_app_store` | Push listing + screenshots to App Store Connect. |
+| `get_app_store_push_job` | Poll an App Store push job. |
+| `get_google_play_link` | Google Play link status for a project. |
+| `preview_google_play_push` | Review Play push plan, blockers, live-store diff. |
+| `push_to_google_play` | Push listing, screenshots, and app icon to Google Play. |
+| `get_google_play_push_job` | Poll a Google Play push job. |
+
 ### Recommended flows
 
 **Template + screenshots (live editor):**
@@ -173,6 +188,12 @@ Add to `~/.gemini/settings.json`:
 2. `get_ai_credits` — confirm balance
 3. `add_store_language({ languageCode: "de_DE" })`
 4. `translate_project({ fromLanguage: "en_US", toLanguage: "de_DE", includeListing: true, includeDesigns: true })`
+
+**Push to App Store / Google Play:**
+
+1. `get_app_store_link` / `get_google_play_link` — confirm linked
+2. `preview_app_store_push` / `preview_google_play_push` — review blockers + diff
+3. `push_to_app_store` / `push_to_google_play` — enqueue (waits by default)
 
 **White backgrounds on all screens:**
 
