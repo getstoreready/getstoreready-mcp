@@ -1,9 +1,9 @@
 # getstoreready-mcp
 
 MCP server for [GetStoreReady](https://getstoreready.com) — create projects,
-upload screenshots, list and apply templates, update store listing text, and
-check project status, all from an MCP-capable AI client (Claude, Cursor,
-Codex, Gemini, …).
+upload screenshots, apply templates, edit screen designs, translate listings,
+export ZIPs, and more from an MCP-capable AI client (Claude, Cursor, Codex,
+Gemini, …).
 
 ## 1. Get an API key
 
@@ -83,25 +83,9 @@ Add to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global):
 }
 ```
 
-Or use Cursor's one-click install deep link — replace `YOUR_KEY` and open:
-
-```
-cursor://anysphere.cursor-deeplink/mcp/install?name=getstoreready&config=BASE64_OF_JSON_BELOW
-```
-
-where the JSON to base64-encode is:
-
-```json
-{
-  "command": "npx",
-  "args": ["-y", "github:getstoreready/getstoreready-mcp"],
-  "env": { "GSR_API_KEY": "YOUR_KEY" }
-}
-```
-
 ### Codex CLI
 
-Add to `~/.codex/config.toml` (or `.codex/config.toml` for a trusted project):
+Add to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.getstoreready]
@@ -112,11 +96,9 @@ args = ["-y", "github:getstoreready/getstoreready-mcp"]
 GSR_API_KEY = "gsr_live_your_key_here"
 ```
 
-Or interactively: `codex mcp add getstoreready -- npx -y github:getstoreready/getstoreready-mcp`.
-
 ### Gemini CLI
 
-Add to `~/.gemini/settings.json` (or project `.gemini/settings.json`):
+Add to `~/.gemini/settings.json`:
 
 ```json
 {
@@ -132,34 +114,74 @@ Add to `~/.gemini/settings.json` (or project `.gemini/settings.json`):
 
 ## Tools
 
+### Projects & templates
+
 | Tool | What it does |
 |---|---|
 | `list_projects` | List your GetStoreReady projects. |
 | `create_project` | Create a new project. Returns its id and editor URL. |
-| `upload_screenshots` | Upload raw app screenshots — prefer a local file `path` (server reads it directly), `data` (base64) is a fallback. Returns asset ids. |
-| `list_templates` | List templates with your actual owned/locked state. |
-| `apply_template` | Apply a template by key, or `"random"` to pick any unlocked one. See recommended flow below. |
-| `place_screenshot_image` | Place an uploaded asset into a screen that already exists on a project, by 1-based screen index. |
-| `update_listing` | Update store listing / ASO text (app name, subtitle, description, keywords, …) for one locale. |
-| `get_project` | Summary of a project — name, platforms, screen count, editor URL. |
+| `get_project` | Project summary — platforms, languages, screen count, editor URL. |
+| `list_templates` | List templates with your owned/locked state. |
+| `apply_template` | Apply a template by key or `"random"`. See recommended flow below. |
+| `upload_screenshots` | Upload raw app screenshots — prefer local `path` over base64 `data`. |
+| `place_screenshot_image` | Place an uploaded asset into a screen by 1-based index. |
 
-### Recommended flow
+### Screen design
 
-If a project has an editor tab already open in the browser, this sequence
-shows progress live, without a manual refresh:
+| Tool | What it does |
+|---|---|
+| `get_screens` | List screens with text layer ids, current copy, and device asset urls. |
+| `get_screen_images` | Return device screenshot images for **your AI client's vision** (not server OCR). |
+| `update_screen_text` | Change one template text layer on one screen. |
+| `update_screen_design` | Change background and/or multiple text layers on one screen. |
+| `bulk_update_designs` | Same background/text across all or selected screens (e.g. white bg everywhere). |
 
-1. `apply_template({ projectId, templateKey })` — **without** `assetIds`.
-   Applies instantly with the template's own placeholder content.
-2. `upload_screenshots({ images: [{ path: "/local/path/to/shot.png" }, ...] })`
-   — pass local file paths, not base64, so the image bytes never round-trip
-   through the tool-call protocol.
-3. `place_screenshot_image({ projectId, screenIndex, assetId })` once per
-   screen, using the asset ids from step 2. Each call updates that screen
-   live.
+### Listing & localization
 
-Passing `assetIds` directly to `apply_template` still works and bundles
-everything into one call — simpler for small batches, but gives no
-incremental feedback and is less reliable for larger images.
+| Tool | What it does |
+|---|---|
+| `list_store_languages` | Active and available store languages for a project. |
+| `add_store_language` | Add `de_DE`, `fr_FR`, etc. |
+| `get_listing` | Read ASO / store listing text for one locale. |
+| `update_listing` | Update listing fields for one locale. |
+| `get_ai_credits` | AI credit balance and translate availability. |
+| `estimate_translation` | Credit cost estimate before translating. |
+| `translate_project` | AI-translate listing and/or screen text between languages. |
+
+### Export
+
+| Tool | What it does |
+|---|---|
+| `export_project` | Enqueue export, wait for ZIP, optionally save to a local path. |
+
+### Recommended flows
+
+**Template + screenshots (live editor):**
+
+1. `apply_template({ projectId, templateKey })` — without `assetIds`
+2. `upload_screenshots({ images: [{ path: "/local/shot.png" }] })`
+3. `place_screenshot_image` once per screen
+
+**Screenshot-aware titles (vision on your client):**
+
+1. `get_screens` or `get_screen_images` — your AI reads the images
+2. `update_screen_text` per screen with generated marketing copy
+
+**Add German + translate:**
+
+1. `estimate_translation({ fromLanguage: "en_US", toLanguage: "de_DE", includeListing: true, includeDesigns: true })`
+2. `get_ai_credits` — confirm balance
+3. `add_store_language({ languageCode: "de_DE" })`
+4. `translate_project({ fromLanguage: "en_US", toLanguage: "de_DE", includeListing: true, includeDesigns: true })`
+
+**White backgrounds on all screens:**
+
+```json
+bulk_update_designs({
+  "projectId": "...",
+  "background": { "type": "solid", "color": "#ffffff" }
+})
+```
 
 ## Local development
 

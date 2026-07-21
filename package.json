@@ -1,6 +1,6 @@
 {
   "name": "getstoreready-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for GetStoreReady — create projects, upload screenshots, and apply templates from Claude, Cursor, and other MCP clients.",
   "type": "module",
   "bin": {
