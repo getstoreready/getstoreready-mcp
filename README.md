@@ -114,6 +114,23 @@ Add to `~/.gemini/settings.json`:
 
 ## Tools
 
+### App bootstrap (from local repo)
+
+| Tool | What it does |
+|---|---|
+| `detect_app` | Infer stack, app name, platforms, locales, and prioritized screens from a repo path. |
+| `discover_screenshots` | Find PNG/JPG under `marketing/`, `fastlane/screenshots/`, `screenshots/`, etc. |
+| `bootstrap_store_project` | One-shot: detect → upload → create project → apply template → return text layers for copy. |
+
+**Agent skill:** [getstoreready/getstoreready-skill](https://github.com/getstoreready/getstoreready-skill) — install with `npx skills add getstoreready/getstoreready-skill`.
+
+**Quick bootstrap:**
+
+1. `detect_app({ appRootPath: "/path/to/app" })`
+2. `discover_screenshots({ appRootPath })` — optional if you already know paths
+3. `bootstrap_store_project({ appRootPath, templateKey: "random" })`
+4. `update_screen_text` per screen (optionally after `get_screen_images` + vision)
+
 ### Projects & templates
 
 | Tool | What it does |
@@ -181,6 +198,12 @@ Link credentials in the web UI first (`/projects/:id/settings`).
 
 1. `get_screens` or `get_screen_images` — your AI reads the images
 2. `update_screen_text` per screen with generated marketing copy
+
+**Bootstrap from an app repo (Flutter / RN / Swift):**
+
+1. `bootstrap_store_project({ appRootPath: "/path/to/my-app" })`
+2. `update_screen_text` for each screen using returned `textLayers`
+3. `update_listing` when ASO metadata is ready
 
 **Add German + translate:**
 
