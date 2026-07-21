@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://getstoreready.com"><img src="logo.png" alt="GetStoreReady" width="320"></a>
+  <a href="https://getstoreready.com"><img src="img/logo.png" alt="GetStoreReady" width="320"></a>
 </p>
 
 <h1 align="center">getstoreready-mcp</h1>
