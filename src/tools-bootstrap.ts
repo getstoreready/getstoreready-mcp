@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { detectApp, discoverScreenshots } from './app-detect.js';
+import { captureScreenshots } from './capture.js';
 import { editorUrl, gsr } from './client.js';
 import { listTextLayers } from './design-utils.js';
 import { text } from './response.js';
@@ -77,8 +78,54 @@ export function registerBootstrapTools(server: McpServer): void {
         screenshots: shots,
         hint:
           shots.length === 0
-            ? 'No images found — capture screenshots manually or use a capture workflow, then retry.'
+            ? 'No images found — call capture_screenshots (simulator/emulator), or add PNGs under marketing/en/, then retry.'
             : 'Pass paths to bootstrap_store_project.screenshotPaths or upload_screenshots.',
+      });
+    },
+  );
+
+  server.tool(
+    'capture_screenshots',
+    'Capture marketing screenshots from a local Flutter / React Native / Swift app using the iOS Simulator ' +
+      '(simctl + optional Maestro) or Android emulator (adb). Writes PNGs under marketing/<locale>/ by default. ' +
+      'Prefer Maestro or deepLinks for distinct screens; without them later shots may duplicate the home screen. ' +
+      'Requires macOS+Xcode for iOS. After capture, call discover_screenshots or bootstrap_store_project.',
+    {
+      appRootPath: z.string().min(1),
+      platform: z.enum(['ios', 'android']).optional().describe('Default ios'),
+      count: z.number().int().min(1).max(7).optional().describe('How many shots — default 5'),
+      locale: z.string().optional().describe('Output locale folder — default en'),
+      outDir: z
+        .string()
+        .optional()
+        .describe('Relative output dir under app root — default marketing/<locale>'),
+      deepLinks: z
+        .array(z.string())
+        .optional()
+        .describe('Optional URL per shot (scheme/universal link) opened before each capture'),
+      screenLabels: z
+        .array(z.string())
+        .optional()
+        .describe('Filenames / Maestro tap targets — defaults to detect_app screen labels'),
+      deviceName: z.string().optional().describe('iOS Simulator device name, e.g. "iPhone 16 Pro"'),
+      install: z
+        .boolean()
+        .optional()
+        .describe('Try to build/install (Flutter) before capture — default true'),
+      settleMs: z.number().int().min(0).max(30_000).optional(),
+      maestroFlowPath: z
+        .string()
+        .optional()
+        .describe('Existing Maestro .yaml path — skips auto-generated flow'),
+    },
+    async (args) => {
+      const result = await captureScreenshots(args);
+      return text({
+        ...result,
+        nextSteps: [
+          'Call bootstrap_store_project with the same appRootPath (it will discover the new PNGs), or pass screenshotPaths.',
+          'For distinct multi-screen captures: install Maestro, or pass deepLinks for each screen.',
+        ],
       });
     },
   );

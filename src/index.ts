@@ -5,7 +5,7 @@ import { registerBootstrapTools } from './tools-bootstrap.js';
 import { registerStorePushTools } from './tools-store-push.js';
 import { registerTools } from './tools.js';
 
-const server = new McpServer({ name: 'gsr-mcp', version: '0.4.0' });
+const server = new McpServer({ name: 'gsr-mcp', version: '0.5.0' });
 registerTools(server);
 registerBootstrapTools(server);
 registerStorePushTools(server);

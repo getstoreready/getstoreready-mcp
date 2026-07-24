@@ -370,7 +370,59 @@ export async function detectApp(rootPath: string): Promise<AppDetection> {
     notes.push('No routes/tabs found — using generic screen suggestions.');
   }
 
-  return { rootPath: root, stack, name, platforms, bundleId: null, locales, screens, notes };
+  const bundleId = await detectBundleId(root, stack);
+  if (!bundleId) notes.push('Bundle id / package name not found — simulator launch may need a manual open.');
+
+  return { rootPath: root, stack, name, platforms, bundleId, locales, screens, notes };
+}
+
+async function detectBundleId(root: string, stack: AppStack): Promise<string | null> {
+  const appJson = await readText(join(root, 'app.json'));
+  if (appJson) {
+    try {
+      const j = JSON.parse(appJson) as {
+        expo?: { ios?: { bundleIdentifier?: string } };
+        ios?: { bundleIdentifier?: string };
+      };
+      const id = j.expo?.ios?.bundleIdentifier ?? j.ios?.bundleIdentifier;
+      if (id) return id;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  for (const p of [join(root, 'ios/Runner/Info.plist'), join(root, 'ios/App/Info.plist')]) {
+    const plist = await readText(p);
+    const m = plist?.match(/<key>CFBundleIdentifier<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
+    if (m && !m.includes('$(')) return m;
+  }
+
+  async function walkPbx(dir: string, depth = 0): Promise<string | null> {
+    if (depth > 5) return null;
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const e of entries) {
+      if (['node_modules', 'Pods', 'build', '.git', 'DerivedData'].includes(e.name)) continue;
+      const abs = join(dir, e.name);
+      if (e.isDirectory()) {
+        const nested = await walkPbx(abs, depth + 1);
+        if (nested) return nested;
+      } else if (/\.(pbxproj|xcconfig)$/.test(e.name)) {
+        const raw = await readText(abs);
+        const m = raw?.match(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^;\n]+)/)?.[1]?.trim();
+        if (m && !m.includes('$(')) return m.replace(/"/g, '');
+      }
+    }
+    return null;
+  }
+
+  if (stack === 'flutter' || stack === 'react-native' || stack === 'swift') {
+    const iosDir = join(root, 'ios');
+    if (await exists(iosDir)) {
+      const fromIos = await walkPbx(iosDir);
+      if (fromIos) return fromIos;
+    }
+  }
+  return null;
 }
 
 export async function discoverScreenshots(

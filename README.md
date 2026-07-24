@@ -125,6 +125,7 @@ Add to `~/.gemini/settings.json`:
 |---|---|
 | `detect_app` | Infer stack, app name, platforms, locales, and prioritized screens from a repo path. |
 | `discover_screenshots` | Find PNG/JPG under `marketing/`, `fastlane/screenshots/`, `screenshots/`, etc. |
+| `capture_screenshots` | Capture from iOS Simulator (`simctl` + optional Maestro) or Android (`adb`) into `marketing/<locale>/`. Prefer `deepLinks` or Maestro for distinct screens. |
 | `bootstrap_store_project` | One-shot: detect → upload → create project → apply template → return text layers for copy. |
 
 **Agent skill:** [getstoreready/getstoreready-skill](https://github.com/getstoreready/getstoreready-skill) — install with `npx skills add getstoreready/getstoreready-skill`.
@@ -132,9 +133,10 @@ Add to `~/.gemini/settings.json`:
 **Quick bootstrap:**
 
 1. `detect_app({ appRootPath: "/path/to/app" })`
-2. `discover_screenshots({ appRootPath })` — optional if you already know paths
+2. `discover_screenshots({ appRootPath })` — if empty, `capture_screenshots({ appRootPath, platform: "ios" })`
 3. `bootstrap_store_project({ appRootPath, templateKey: "random" })`
 4. `update_screen_text` per screen (optionally after `get_screen_images` + vision)
+5. Optional: `update_listing` → `translate_project` → `export_project` → store push tools
 
 ### Projects & templates
 
