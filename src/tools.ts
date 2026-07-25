@@ -62,7 +62,9 @@ interface TemplateRow {
   owned: boolean;
   price: number | null;
   excerpt: string | null;
-  data: { screens?: unknown[] } | null;
+  description?: string | null;
+  categories?: { slug: string; name: string }[];
+  data: { screens?: unknown[]; featureGraphic?: unknown } | null;
 }
 
 function sleep(ms: number) {
@@ -296,7 +298,8 @@ export function registerTools(server: McpServer): void {
 
   server.tool(
     'list_templates',
-    "List available templates with this user's actual owned/locked state.",
+    "List available templates from the GetStoreReady API with this user's owned/locked state. " +
+      'Use categories, name, and excerpt to pick a fit — do not hardcode template keys in the agent.',
     {},
     async () => {
       const { templates } = await gsr.get<{ templates: TemplateRow[] }>(
@@ -311,7 +314,10 @@ export function registerTools(server: McpServer): void {
           owned: t.owned,
           price: t.price,
           excerpt: t.excerpt,
+          description: t.description ?? null,
+          categories: (t.categories ?? []).map((c) => c.name),
           screenCount: t.data?.screens?.length ?? 0,
+          hasFeatureGraphic: !!t.data?.featureGraphic,
         })),
       );
     },
