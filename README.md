@@ -150,6 +150,31 @@ Add to `~/.gemini/settings.json`:
 | `upload_screenshots` | Upload raw app screenshots — prefer local `path` over base64 `data`. |
 | `place_screenshot_image` | Place an uploaded asset into a screen by 1-based index. |
 
+### Free-form design (full editor parity)
+
+Everything the web editor can do — free text with per-word highlight runs, any
+Google Font, device mockups with 3D tilt/lean and view presets, image & icon
+layers, edge fades, gradient/pattern/panorama backgrounds, per-device overrides
+(iPhone vs iPad vs Android), groups and z-order — is one Design JSON per screen.
+These tools read and write it directly; the vocabulary comes live from the API,
+so new editor features show up without an MCP update.
+
+| Tool | What it does |
+|---|---|
+| `get_design_catalog` | **Start here.** Design guide + JSON Schema + layer defaults, device models & view presets, slot sizes, fonts, icons. Also exposed as the `gsr://design-guide` resource. |
+| `get_screen_design` | Full Design JSON of one screen (or the feature graphic). |
+| `set_screen_design` | Replace a screen's whole design (validated by the API). |
+| `edit_layers` | Batch ops: add / update / remove / move / duplicate / set_override (per device slot) / group / ungroup. |
+| `set_background` | Background for one/all screens, or a per-slot background override. |
+| `render_preview` | Render a screen to PNG per device slot with the export engine — for the agent to *look* at its work. |
+| `add_screen` / `delete_screen` / `move_screen` | Blank, template, copied or full-design screens; feature graphic too. |
+| `set_device_slots` | Which device sizes the project produces; tablet landscape. |
+| `list_media` | Your uploads + curated stock images usable as `assetId`. |
+
+**Design loop:** `get_design_catalog` → `add_screen` / `set_screen_design` →
+`render_preview` → `edit_layers` tweaks (incl. `set_override` for tablets) →
+`render_preview` again for every enabled slot.
+
 ### Screen design
 
 | Tool | What it does |

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { detectApp, discoverScreenshots } from './app-detect.js';
 import { captureScreenshots } from './capture.js';
-import { editorUrl, gsr } from './client.js';
+import { editorUrl, gsr, imageMimeType } from './client.js';
 import { listTextLayers } from './design-utils.js';
 import { text } from './response.js';
 import {
@@ -24,7 +24,7 @@ async function uploadPaths(paths: string[]): Promise<string[]> {
   for (const [i, p] of paths.entries()) {
     const buf = await readFile(p);
     const form = new FormData();
-    form.append('file', new Blob([buf]), basename(p) || `screenshot-${i + 1}.png`);
+    form.append('file', new Blob([buf], { type: imageMimeType(buf) }), basename(p) || `screenshot-${i + 1}.png`);
     const { asset } = await gsr.upload<{ asset: { id: string } }>('/assets', form);
     assetIds.push(asset.id);
   }

@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiBase, assetUrl, editorUrl, gsr } from './client.js';
+import { apiBase, assetUrl, editorUrl, gsr, imageMimeType } from './client.js';
 import {
   cloneDesign,
   deviceAssetId,
@@ -288,7 +288,7 @@ export function registerTools(server: McpServer): void {
           name ??= `screenshot-${i + 1}.png`;
         }
         const form = new FormData();
-        form.append('file', new Blob([buf]), name);
+        form.append('file', new Blob([buf], { type: imageMimeType(buf) }), name);
         const { asset } = await gsr.upload<{ asset: { id: string } }>('/assets', form);
         assetIds.push(asset.id);
       }

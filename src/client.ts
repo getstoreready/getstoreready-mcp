@@ -90,7 +90,7 @@ export const gsr = {
   get: <T>(path: string) => request<T>(path, undefined, JSON_TIMEOUT_MS),
   getQuery: <T>(path: string, params: Record<string, string | number | boolean | undefined>) =>
     request<T>(`${path}${buildQuery(params)}`, undefined, JSON_TIMEOUT_MS),
-  post: <T>(path: string, body?: unknown) =>
+  post: <T>(path: string, body?: unknown, timeoutMs = JSON_TIMEOUT_MS) =>
     request<T>(
       path,
       {
@@ -98,7 +98,7 @@ export const gsr = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body ?? {}),
       },
-      JSON_TIMEOUT_MS,
+      timeoutMs,
     ),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(
@@ -110,6 +110,7 @@ export const gsr = {
       },
       JSON_TIMEOUT_MS,
     ),
+  delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }, JSON_TIMEOUT_MS),
   // No Content-Type here on purpose — fetch sets the multipart boundary
   // itself when the body is a FormData instance.
   upload: <T>(path: string, form: FormData) =>
@@ -144,4 +145,15 @@ export const gsr = {
 
 export function editorUrl(projectId: string): string {
   return `${SITE_BASE}/projects/${projectId}`;
+}
+
+/** Image MIME type from magic bytes — the API's upload filter rejects
+ * untyped (application/octet-stream) multipart files. */
+export function imageMimeType(buf: Buffer): string {
+  if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
+  if (buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
+  if (buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP')
+    return 'image/webp';
+  if (buf.subarray(0, 3).toString() === 'GIF') return 'image/gif';
+  return 'application/octet-stream';
 }
