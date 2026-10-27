@@ -8,6 +8,7 @@ import {
   fetchProject,
   fetchScreenshots,
   orderedScreenshotScreens,
+  markSeen,
   patchScreenshotDesign,
   type ScreenshotRow,
 } from './screens.js';
@@ -388,10 +389,12 @@ export function registerDesignTools(server: McpServer): void {
     { projectId: z.string().min(1), ...screenRef, locale: z.string().min(2).optional() },
     async ({ projectId, locale, ...ref }) => {
       const { locale: loc, shot, design, screenshots } = await loadScreen(projectId, ref, locale);
+      markSeen(shot.id, loc, shot.designUpdatedAt);
       return text({
         screenshotId: shot.id,
         screenIndex: screenIndexOf(screenshots, shot),
         kind: shot.kind,
+        designUpdatedAt: shot.designUpdatedAt,
         templateKey: shot.templateKey ?? null,
         locale: loc,
         design,
@@ -415,7 +418,7 @@ export function registerDesignTools(server: McpServer): void {
       const { locale: loc, shot, screenshots } = await loadScreen(projectId, ref, locale);
       const next = { version: 1, ...design } as DesignLike;
       for (const l of (next.layers ?? []) as DesignLayer[]) l.id ??= randomUUID();
-      await patchScreenshotDesign(shot.id, next, loc);
+      await patchScreenshotDesign(shot.id, next, loc, shot.designUpdatedAt);
       markEdited(shot.id);
       return text({
         screenshotId: shot.id,
@@ -450,7 +453,7 @@ export function registerDesignTools(server: McpServer): void {
           throw new Error(`ops[${i}] (${op.op}): ${(err as Error).message}`);
         }
       });
-      await patchScreenshotDesign(shot.id, design, loc);
+      await patchScreenshotDesign(shot.id, design, loc, shot.designUpdatedAt);
       markEdited(shot.id);
       return text({
         screenshotId: shot.id,
@@ -499,7 +502,7 @@ export function registerDesignTools(server: McpServer): void {
         } else {
           design.background = background as unknown as DesignLike['background'];
         }
-        await patchScreenshotDesign(shot.id, design, loc);
+        await patchScreenshotDesign(shot.id, design, loc, shot.designUpdatedAt);
         markEdited(shot.id);
       }
       return text({
@@ -535,6 +538,7 @@ export function registerDesignTools(server: McpServer): void {
     },
     async ({ projectId, locale, slots, scale, ...ref }) => {
       const { locale: loc, shot, screenshots } = await loadScreen(projectId, ref, locale);
+      markSeen(shot.id, loc, shot.designUpdatedAt);
       const targets = slots ?? (await defaultSlots(projectId, shot));
       const images = await renderPreviews(shot.id, targets, loc, scale);
       return mixed([
@@ -550,6 +554,50 @@ export function registerDesignTools(server: McpServer): void {
         },
         ...images,
       ]);
+    },
+  );
+
+  server.tool(
+    'list_screen_revisions',
+    'List previous designs of ONE screen (newest first; saved automatically on every change, ' +
+      'editor autosaves grouped per 2 minutes). Use with restore_screen_revision to undo a ' +
+      'change on a single screen without touching the others.',
+    { projectId: z.string().min(1), ...screenRef, locale: z.string().min(2).optional() },
+    async ({ projectId, locale, ...ref }) => {
+      const { locale: loc, shot, screenshots } = await loadScreen(projectId, ref, locale);
+      const r = await gsr.get<{ revisions: unknown[] }>(
+        `/screenshots/${shot.id}/revisions?locale=${encodeURIComponent(loc)}`,
+      );
+      return text({
+        screenshotId: shot.id,
+        screenIndex: screenIndexOf(screenshots, shot),
+        locale: loc,
+        revisions: r.revisions,
+        editorUrl: editorUrl(projectId),
+      });
+    },
+  );
+
+  server.tool(
+    'restore_screen_revision',
+    'Put ONE screen back to a previous design from list_screen_revisions (the current design ' +
+      'is saved as a revision first, so this is undoable). Other screens are not touched.',
+    { projectId: z.string().min(1), ...screenRef, revisionId: z.string().min(1) },
+    async ({ projectId, revisionId, ...ref }) => {
+      const { shot, screenshots } = await loadScreen(projectId, ref);
+      const r = await gsr.post<{ locale: string; designUpdatedAt?: string }>(
+        `/screenshots/${shot.id}/revisions/${revisionId}/restore`,
+      );
+      markSeen(shot.id, r.locale, r.designUpdatedAt);
+      markEdited(shot.id);
+      return text({
+        restored: revisionId,
+        screenshotId: shot.id,
+        screenIndex: screenIndexOf(screenshots, shot),
+        locale: r.locale,
+        hint: 'Tell the user to reload an open editor tab so it does not autosave the old state over this.',
+        editorUrl: editorUrl(projectId),
+      });
     },
   );
 

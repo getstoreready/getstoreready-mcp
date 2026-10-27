@@ -1,6 +1,6 @@
 {
   "name": "getstoreready-mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MCP server for GetStoreReady — bootstrap from local apps, capture simulator screenshots, upload assets, and drive listing/export/push from Claude, Cursor, and other MCP clients.",
   "type": "module",
   "bin": {

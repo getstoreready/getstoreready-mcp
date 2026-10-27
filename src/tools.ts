@@ -383,7 +383,7 @@ export function registerTools(server: McpServer): void {
         );
       }
       targetLayer.assetId = assetId;
-      await patchScreenshotDesign(target.id, design);
+      await patchScreenshotDesign(target.id, design, undefined, target.designUpdatedAt);
       return text({
         screenIndex,
         screenshotId: target.id,
@@ -414,7 +414,7 @@ export function registerTools(server: McpServer): void {
       const target = screenAtIndex(screenshots, screenIndex);
       const design = target.design ?? { layers: [] };
       const next = setLayerText(design, layerId, newText, highlightPhrase);
-      await patchScreenshotDesign(target.id, next, loc);
+      await patchScreenshotDesign(target.id, next, loc, target.designUpdatedAt);
       return text({
         screenIndex,
         layerId,
@@ -454,7 +454,7 @@ export function registerTools(server: McpServer): void {
       for (const u of textUpdates ?? []) {
         next = setLayerText(next, u.layerId, u.text, u.highlightPhrase);
       }
-      await patchScreenshotDesign(target.id, next, loc);
+      await patchScreenshotDesign(target.id, next, loc, target.designUpdatedAt);
       return text({
         screenIndex,
         locale: loc,
@@ -499,7 +499,7 @@ export function registerTools(server: McpServer): void {
         for (const u of textUpdates ?? []) {
           next = setLayerText(next, u.layerId, u.text, u.highlightPhrase);
         }
-        await patchScreenshotDesign(shot.id, next, loc);
+        await patchScreenshotDesign(shot.id, next, loc, shot.designUpdatedAt);
         updated.push(screenIndex);
       }
       return text({

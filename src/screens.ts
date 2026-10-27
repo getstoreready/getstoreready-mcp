@@ -1,4 +1,4 @@
-import { gsr } from './client.js';
+import { GsrApiError, gsr } from './client.js';
 import type { DesignLike } from './design-utils.js';
 
 export interface ScreenshotRow {
@@ -7,6 +7,8 @@ export interface ScreenshotRow {
   kind: 'screenshot' | 'feature_graphic';
   templateKey?: string | null;
   design?: DesignLike | null;
+  /** When this locale's design last changed (API echoes it for conflict checks). */
+  designUpdatedAt?: string;
 }
 
 export interface ProjectRow {
@@ -43,9 +45,7 @@ export async function fetchScreenshots(
 }
 
 export function orderedScreenshotScreens(screenshots: ScreenshotRow[]): ScreenshotRow[] {
-  return screenshots
-    .filter((s) => s.kind === 'screenshot')
-    .sort((a, b) => a.order - b.order);
+  return screenshots.filter((s) => s.kind === 'screenshot').sort((a, b) => a.order - b.order);
 }
 
 export function screenAtIndex(screenshots: ScreenshotRow[], screenIndex: number): ScreenshotRow {
@@ -59,11 +59,39 @@ export function screenAtIndex(screenshots: ScreenshotRow[], screenIndex: number)
   return target;
 }
 
+// The design version this agent last LOOKED AT per screen+locale (read via
+// get_screen_design / render_preview, or its own last write). Writes send it as
+// baseUpdatedAt, so a screen someone changed in the editor meanwhile is not
+// silently overwritten: the API answers 409 and the agent must re-read.
+const seenVersion = new Map<string, string>();
+const seenKey = (screenshotId: string, locale?: string) => `${screenshotId}:${locale ?? ''}`;
+export function markSeen(screenshotId: string, locale: string | undefined, at?: string): void {
+  if (at) seenVersion.set(seenKey(screenshotId, locale), at);
+}
+
 export async function patchScreenshotDesign(
   screenshotId: string,
   design: DesignLike,
   locale?: string,
+  /** Version the change was based on when the agent never looked at this screen. */
+  fallbackBase?: string,
 ): Promise<void> {
   const q = locale ? `?locale=${encodeURIComponent(locale)}` : '';
-  await gsr.patch(`/screenshots/${screenshotId}${q}`, { design });
+  const baseUpdatedAt = seenVersion.get(seenKey(screenshotId, locale)) ?? fallbackBase;
+  try {
+    const r = await gsr.patch<{ screenshot?: { designUpdatedAt?: string } }>(
+      `/screenshots/${screenshotId}${q}`,
+      { design, ...(baseUpdatedAt ? { baseUpdatedAt } : {}) },
+    );
+    markSeen(screenshotId, locale, r?.screenshot?.designUpdatedAt);
+  } catch (err) {
+    if (err instanceof GsrApiError && err.status === 409) {
+      throw new Error(
+        `${err.message} Someone (probably the user, in the editor) changed this screen after ` +
+          'you last read it. Call get_screen_design, keep their changes, and re-apply only ' +
+          'what you were asked to change. Never overwrite the whole design blindly.',
+      );
+    }
+    throw err;
+  }
 }
