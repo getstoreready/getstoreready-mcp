@@ -6,7 +6,7 @@ import { registerDesignTools } from './tools-design.js';
 import { registerStorePushTools } from './tools-store-push.js';
 import { registerTools } from './tools.js';
 
-const server = new McpServer({ name: 'gsr-mcp', version: '0.6.0' });
+const server = new McpServer({ name: 'gsr-mcp', version: '0.7.0' });
 registerTools(server);
 registerBootstrapTools(server);
 registerDesignTools(server);

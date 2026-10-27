@@ -237,6 +237,21 @@ function applyOp(design: DesignLike, op: LayerOp, catalog: DesignCatalog): strin
   }
 }
 
+interface LayoutWarning {
+  kind: string;
+  layers: string[];
+  message: string;
+}
+
+// Which slots of each screen were previewed since its last edit — so write
+// tools can remind the agent which device sizes it has not looked at yet.
+// (One design renders into every slot; aspect ratios differ, so a layout tuned
+// on iPhone routinely breaks on tablets.)
+const previewedSince = new Map<string, Set<string>>();
+function markEdited(screenshotId: string): void {
+  previewedSince.set(screenshotId, new Set());
+}
+
 async function renderPreviews(
   screenshotId: string,
   slots: string[],
@@ -244,26 +259,60 @@ async function renderPreviews(
   scale: number | undefined,
 ): Promise<McpContent[]> {
   const out: McpContent[] = [];
+  const seen = previewedSince.get(screenshotId) ?? new Set<string>();
+  previewedSince.set(screenshotId, seen);
   for (const slot of slots) {
-    const r = await gsr.post<{ mimeType: string; data: string; width: number; height: number }>(
-      `/screenshots/${screenshotId}/preview`,
-      { slot, locale, scale },
-      120_000,
-    );
-    out.push({ type: 'text', text: `${slot} — ${r.width}×${r.height}` });
+    const r = await gsr.post<{
+      mimeType: string;
+      data: string;
+      width: number;
+      height: number;
+      warnings?: LayoutWarning[];
+    }>(`/screenshots/${screenshotId}/preview`, { slot, locale, scale }, 120_000);
+    seen.add(slot);
+    const warnings = r.warnings ?? [];
+    out.push({
+      type: 'text',
+      text:
+        `${slot} — ${r.width}×${r.height}\n` +
+        (warnings.length
+          ? `⚠ ${warnings.length} layout issue(s) found automatically — fix before moving on:\n` +
+            warnings.map((w) => `  - [${w.kind}] ${w.message}`).join('\n')
+          : '✓ automatic layout check: no overlaps, clipping or undersized text'),
+    });
     out.push({ type: 'image', data: r.data, mimeType: r.mimeType });
   }
   return out;
 }
 
-/** Default preview slots: the project's enabled phone/tablet slots. */
-async function defaultSlots(projectId: string, shot: ScreenshotRow): Promise<string[]> {
+async function designSlots(projectId: string, shot: ScreenshotRow): Promise<string[]> {
   if (shot.kind === 'feature_graphic') return ['feature-graphic'];
   const project = await fetchProject(projectId);
   const enabled = (project.enabledDeviceSlots ?? []).filter(
     (s) => s !== 'feature-graphic' && s !== 'app-icon',
   );
-  return enabled.length ? enabled.slice(0, 4) : ['iphone-6.3'];
+  return enabled.length ? enabled : ['iphone-6.3'];
+}
+
+/** Default preview slots: every enabled phone/tablet slot (tool max 6). */
+async function defaultSlots(projectId: string, shot: ScreenshotRow): Promise<string[]> {
+  return (await designSlots(projectId, shot)).slice(0, 6);
+}
+
+/** Attached to every design write: the slots still to check. */
+async function reviewReminder(projectId: string, shot: ScreenshotRow) {
+  const slots = await designSlots(projectId, shot);
+  const seen = previewedSince.get(shot.id) ?? new Set<string>();
+  const notPreviewed = slots.filter((s) => !seen.has(s));
+  return {
+    enabledSlots: slots,
+    notPreviewedSinceEdit: notPreviewed,
+    reviewHint: notPreviewed.length
+      ? `This screen renders on ${slots.length} device sizes with different aspect ratios. ` +
+        `Call render_preview (omit slots = all) and fix every reported layout issue; ` +
+        `tablets usually need larger text size and repositioned layers via set_override.`
+      : 'All enabled slots previewed since the last edit.',
+  };
 }
 
 export function registerDesignTools(server: McpServer): void {
@@ -367,12 +416,13 @@ export function registerDesignTools(server: McpServer): void {
       const next = { version: 1, ...design } as DesignLike;
       for (const l of (next.layers ?? []) as DesignLayer[]) l.id ??= randomUUID();
       await patchScreenshotDesign(shot.id, next, loc);
+      markEdited(shot.id);
       return text({
         screenshotId: shot.id,
         screenIndex: screenIndexOf(screenshots, shot),
         locale: loc,
         layers: layerSummary(next),
-        hint: 'Call render_preview to check the result.',
+        ...(await reviewReminder(projectId, shot)),
         editorUrl: editorUrl(projectId),
       });
     },
@@ -401,12 +451,14 @@ export function registerDesignTools(server: McpServer): void {
         }
       });
       await patchScreenshotDesign(shot.id, design, loc);
+      markEdited(shot.id);
       return text({
         screenshotId: shot.id,
         screenIndex: screenIndexOf(screenshots, shot),
         locale: loc,
         results,
         layers: layerSummary(design),
+        ...(await reviewReminder(projectId, shot)),
         editorUrl: editorUrl(projectId),
       });
     },
@@ -448,6 +500,7 @@ export function registerDesignTools(server: McpServer): void {
           design.background = background as unknown as DesignLike['background'];
         }
         await patchScreenshotDesign(shot.id, design, loc);
+        markEdited(shot.id);
       }
       return text({
         updated: targets.map((s) => ({
@@ -463,9 +516,11 @@ export function registerDesignTools(server: McpServer): void {
 
   server.tool(
     'render_preview',
-    'Render a screen to PNG exactly as the export will (same engine) and return the images for ' +
-      'visual review. ALWAYS use this after designing: check wrapping, overlaps, cropping, contrast ' +
-      "on phones AND tablets. Default slots = the project's enabled device slots (max 4).",
+    'Render a screen to PNG exactly as the export will (same engine) and return the images plus an ' +
+      'AUTOMATIC LAYOUT CHECK per slot (overlapping texts, highlight pills covering other lines, text ' +
+      'running into a device/image or off the canvas, text too small for the slot). ALWAYS call it ' +
+      'after designing with no slots argument (= every enabled device size, phones AND tablets) and ' +
+      'fix every reported issue — usually with edit_layers set_override for that slot.',
     {
       projectId: z.string().min(1),
       ...screenRef,
