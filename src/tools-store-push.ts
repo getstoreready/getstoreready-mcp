@@ -57,7 +57,7 @@ export function registerStorePushTools(server: McpServer): void {
   server.tool(
     'get_app_store_link',
     'Get App Store Connect link status for a project (credential label, app id, bundle id). ' +
-      'Requires Premium/Pro. Set up credentials in the web UI first.',
+      'Requires Premium/Pro. No link yet? Use add_app_store_credential + link_app_store.',
     { projectId: z.string().min(1) },
     async ({ projectId }) => {
       const data = await gsr.get<{ link: unknown }>(`/projects/${projectId}/app-store/link`);
@@ -98,15 +98,11 @@ export function registerStorePushTools(server: McpServer): void {
       displaySlots: z.array(ascDisplaySlots).optional(),
     },
     async ({ projectId, wait, displaySlots, ...body }) => {
-      const { jobId } = await gsr.post<{ jobId: string }>(
-        `/projects/${projectId}/app-store/push`,
-        { ...body, displaySlots },
-      );
-      const job = await pollPushJob(
-        `/projects/${projectId}/app-store/push-jobs`,
-        jobId,
-        wait,
-      );
+      const { jobId } = await gsr.post<{ jobId: string }>(`/projects/${projectId}/app-store/push`, {
+        ...body,
+        displaySlots,
+      });
+      const job = await pollPushJob(`/projects/${projectId}/app-store/push-jobs`, jobId, wait);
       return text({ jobId, ...job, editorUrl: editorUrl(projectId) });
     },
   );
@@ -120,11 +116,7 @@ export function registerStorePushTools(server: McpServer): void {
       wait: z.boolean().default(false),
     },
     async ({ projectId, jobId, wait }) => {
-      const job = await pollPushJob(
-        `/projects/${projectId}/app-store/push-jobs`,
-        jobId,
-        wait,
-      );
+      const job = await pollPushJob(`/projects/${projectId}/app-store/push-jobs`, jobId, wait);
       return text(job);
     },
   );
@@ -132,7 +124,7 @@ export function registerStorePushTools(server: McpServer): void {
   server.tool(
     'get_google_play_link',
     'Get Google Play Console link status for a project (credential, package name). ' +
-      'Requires Premium/Pro. Set up credentials in the web UI first.',
+      'Requires Premium/Pro. No link yet? Use add_app_store_credential + link_app_store.',
     { projectId: z.string().min(1) },
     async ({ projectId }) => {
       const data = await gsr.get<{ link: unknown }>(`/projects/${projectId}/google-play/link`);
@@ -179,11 +171,7 @@ export function registerStorePushTools(server: McpServer): void {
         `/projects/${projectId}/google-play/push`,
         { ...body, displaySlots },
       );
-      const job = await pollPushJob(
-        `/projects/${projectId}/google-play/push-jobs`,
-        jobId,
-        wait,
-      );
+      const job = await pollPushJob(`/projects/${projectId}/google-play/push-jobs`, jobId, wait);
       return text({ jobId, ...job, editorUrl: editorUrl(projectId) });
     },
   );
@@ -197,11 +185,7 @@ export function registerStorePushTools(server: McpServer): void {
       wait: z.boolean().default(false),
     },
     async ({ projectId, jobId, wait }) => {
-      const job = await pollPushJob(
-        `/projects/${projectId}/google-play/push-jobs`,
-        jobId,
-        wait,
-      );
+      const job = await pollPushJob(`/projects/${projectId}/google-play/push-jobs`, jobId, wait);
       return text(job);
     },
   );

@@ -1,4 +1,8 @@
-import { applyTextPreservingStyle, detectHighlightHint, type HighlightStyleKind } from './styled-text.js';
+import {
+  applyTextPreservingStyle,
+  detectHighlightHint,
+  type HighlightStyleKind,
+} from './styled-text.js';
 
 export interface RunLike {
   text: string;

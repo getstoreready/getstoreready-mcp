@@ -175,9 +175,7 @@ export function registerTools(server: McpServer): void {
         templateKey: shot.templateKey ?? null,
         textLayers: listTextLayers(shot.design),
         deviceAssetId: deviceAssetId(shot.design),
-        deviceAssetUrl: deviceAssetId(shot.design)
-          ? assetUrl(deviceAssetId(shot.design)!)
-          : null,
+        deviceAssetUrl: deviceAssetId(shot.design) ? assetUrl(deviceAssetId(shot.design)!) : null,
       }));
       return text({ projectId, locale: loc, screens, editorUrl: editorUrl(projectId) });
     },
@@ -261,10 +259,7 @@ export function registerTools(server: McpServer): void {
         .array(
           z
             .object({
-              path: z
-                .string()
-                .optional()
-                .describe('Local file path to the image — preferred'),
+              path: z.string().optional().describe('Local file path to the image — preferred'),
               data: z.string().optional().describe('Base64-encoded image bytes — fallback only'),
               filename: z.string().optional(),
             })
@@ -485,7 +480,9 @@ export function registerTools(server: McpServer): void {
           }),
         )
         .optional()
-        .describe('Same layer id applied on every targeted screen (e.g. a shared headline layer id)'),
+        .describe(
+          'Same layer id applied on every targeted screen (e.g. a shared headline layer id)',
+        ),
     },
     async ({ projectId, locale, screenIndices, background, textUpdates }) => {
       if (!background && !textUpdates?.length) {
@@ -528,11 +525,7 @@ export function registerTools(server: McpServer): void {
     'Add one or more store languages to a project (e.g. de_DE for German). Does not translate — call translate_project after.',
     {
       projectId: z.string().min(1),
-      languageCode: z
-        .string()
-        .min(2)
-        .optional()
-        .describe('Single code, e.g. de_DE'),
+      languageCode: z.string().min(2).optional().describe('Single code, e.g. de_DE'),
       languageCodes: z
         .array(z.string().min(2))
         .min(1)
@@ -619,7 +612,10 @@ export function registerTools(server: McpServer): void {
       fromLanguage: z.string().min(2),
       toLanguage: z.string().min(2),
       includeListing: z.boolean().optional().describe('Include store listing fields'),
-      includeDesigns: z.boolean().optional().describe('Include screenshot text layers — default true'),
+      includeDesigns: z
+        .boolean()
+        .optional()
+        .describe('Include screenshot text layers — default true'),
       onlyStale: z
         .boolean()
         .optional()
@@ -666,7 +662,10 @@ export function registerTools(server: McpServer): void {
       toLanguage: z.string().min(2),
       includeListing: z.boolean().default(false),
       includeDesigns: z.boolean().default(true),
-      fitText: z.boolean().default(true).describe('Shrink font size when translated copy is longer'),
+      fitText: z
+        .boolean()
+        .default(true)
+        .describe('Shrink font size when translated copy is longer'),
       onlyStale: z.boolean().default(false),
       screens: z.array(z.number().int().min(0)).optional(),
       listingFields: z.array(z.enum(LISTING_FIELDS)).optional(),
@@ -699,8 +698,7 @@ export function registerTools(server: McpServer): void {
     },
     async ({ projectId, locales, slots, wait, savePath }) => {
       const project = await fetchProject(projectId);
-      const exportLocales =
-        locales ??
+      const exportLocales = locales ??
         project.storeLocales?.map((l) => l.languageCode) ?? [project.defaultStoreLanguage];
       const exportSlots = slots ?? project.enabledDeviceSlots ?? ['iphone-6.9', 'android-phone'];
 

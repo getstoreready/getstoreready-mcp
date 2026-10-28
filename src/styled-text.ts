@@ -1,17 +1,6 @@
 import type { DesignLayer, RunLike } from './design-utils.js';
 
-const STOP_WORDS = new Set([
-  'a',
-  'an',
-  'and',
-  'for',
-  'in',
-  'on',
-  'the',
-  'to',
-  'with',
-  'your',
-]);
+const STOP_WORDS = new Set(['a', 'an', 'and', 'for', 'in', 'on', 'the', 'to', 'with', 'your']);
 
 export type HighlightStyleKind = 'pill' | 'accent' | 'mixed' | null;
 
@@ -54,8 +43,7 @@ function findPhraseSpan(haystack: string, needle: string): { start: number; end:
 }
 
 function pickHighlightStyle(sourceRuns: RunLike[]): Omit<RunLike, 'text'> {
-  const hit =
-    sourceRuns.find((r) => r.bg) ?? sourceRuns.find((r) => r.italic || r.color);
+  const hit = sourceRuns.find((r) => r.bg) ?? sourceRuns.find((r) => r.italic || r.color);
   if (!hit) return {};
   return {
     bg: hit.bg,

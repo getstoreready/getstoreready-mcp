@@ -92,11 +92,13 @@ async function which(bin: string): Promise<boolean> {
 }
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40) || 'screen';
+  return (
+    input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40) || 'screen'
+  );
 }
 
 async function readBundleId(root: string, stack: AppStack): Promise<string | null> {
@@ -123,16 +125,11 @@ async function readBundleId(root: string, stack: AppStack): Promise<string | nul
     }
   }
 
-  const plistCandidates = [
-    join(root, 'ios/Runner/Info.plist'),
-    join(root, 'ios/App/Info.plist'),
-  ];
+  const plistCandidates = [join(root, 'ios/Runner/Info.plist'), join(root, 'ios/App/Info.plist')];
   for (const p of plistCandidates) {
     const plist = await tryRead(p);
     if (!plist) continue;
-    const m = plist.match(
-      /<key>CFBundleIdentifier<\/key>\s*<string>([^<]+)<\/string>/,
-    )?.[1];
+    const m = plist.match(/<key>CFBundleIdentifier<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
     if (m && !m.includes('$(')) return m;
   }
 
@@ -187,9 +184,7 @@ async function ensureIosSimulator(deviceName?: string): Promise<{ udid: string; 
   const all: Dev[] = Object.values(json.devices).flat();
 
   let pick =
-    (deviceName
-      ? all.find((d) => d.name.toLowerCase() === deviceName.toLowerCase())
-      : null) ??
+    (deviceName ? all.find((d) => d.name.toLowerCase() === deviceName.toLowerCase()) : null) ??
     all.find((d) => d.state === 'Booted') ??
     all.find((d) => /iPhone\s*(1[5-9]|1[6-9]|1[5-9] Pro)/i.test(d.name)) ??
     all.find((d) => /iPhone/i.test(d.name));
@@ -217,13 +212,14 @@ async function installFlutterIos(root: string, notes: string[]): Promise<void> {
     return;
   }
   notes.push('Building/installing Flutter app on iOS simulator (may take a few minutes)…');
-  const build = await run(
-    'flutter',
-    ['build', 'ios', '--simulator', '--debug', '--no-codesign'],
-    { cwd: root, timeoutMs: 600_000 },
-  );
+  const build = await run('flutter', ['build', 'ios', '--simulator', '--debug', '--no-codesign'], {
+    cwd: root,
+    timeoutMs: 600_000,
+  });
   if (build.code !== 0) {
-    notes.push(`flutter build ios failed — try launching the app yourself. ${build.stderr.slice(-400)}`);
+    notes.push(
+      `flutter build ios failed — try launching the app yourself. ${build.stderr.slice(-400)}`,
+    );
     return;
   }
   // Prefer flutter install if available
@@ -232,7 +228,9 @@ async function installFlutterIos(root: string, notes: string[]): Promise<void> {
     timeoutMs: 180_000,
   });
   if (install.code !== 0) {
-    notes.push('flutter install had issues — continuing; launch may still work if previously installed.');
+    notes.push(
+      'flutter install had issues — continuing; launch may still work if previously installed.',
+    );
   }
 }
 
@@ -430,7 +428,9 @@ export async function captureScreenshots(opts: CaptureOptions): Promise<CaptureR
   const hasMaestro = await which('maestro');
   let method: CaptureResult['method'] = opts.deepLinks?.length ? 'simctl' : 'simctl';
   if (hasMaestro && !opts.deepLinks?.length) {
-    notes.push('Maestro available — will tap screen labels between simctl screenshots when possible.');
+    notes.push(
+      'Maestro available — will tap screen labels between simctl screenshots when possible.',
+    );
     method = 'mixed';
   } else if (!opts.deepLinks?.length) {
     notes.push(

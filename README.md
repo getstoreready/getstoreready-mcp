@@ -191,6 +191,9 @@ so new editor features show up without an MCP update.
 |---|---|
 | `list_store_languages` | Active and available store languages for a project. |
 | `add_store_language` | Add `de_DE`, `fr_FR`, etc. |
+| `remove_store_language` | Remove a language (not the primary one) |
+| `reorder_store_languages` | Set language order |
+| `set_primary_store_language` | Change the primary (source) language |
 | `get_listing` | Read ASO / store listing text for one locale. |
 | `update_listing` | Update listing fields for one locale. |
 | `get_ai_credits` | AI credit balance and translate availability. |
@@ -279,3 +282,19 @@ GSR_API_KEY=... GSR_API_BASE=http://localhost:3201 GSR_SITE_URL=http://localhost
 ## License
 
 MIT
+
+## Store connections
+
+Connect a project to App Store Connect / Google Play without the web UI.
+Secrets are passed as **file paths** — the MCP reads the file locally and sends
+it encrypted to GetStoreReady, so keys never enter the chat.
+
+| Tool | Purpose |
+|------|---------|
+| `list_store_credentials` | Saved keys / service accounts (no secrets) |
+| `add_app_store_credential` | `issuerId`, `keyId`, `privateKeyPath` (AuthKey_XXXX.p8) |
+| `add_google_play_credential` | `serviceAccountJsonPath` |
+| `test_store_credential` | Check a credential, optionally against an app |
+| `delete_store_credential` | Remove a saved credential |
+| `link_app_store` / `link_google_play` | Connect a project to its store app |
+| `test_store_link` / `unlink_store` | Check or remove a project's link |

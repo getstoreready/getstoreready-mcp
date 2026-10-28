@@ -7,11 +7,7 @@ import { captureScreenshots } from './capture.js';
 import { editorUrl, gsr, imageMimeType } from './client.js';
 import { listTextLayers } from './design-utils.js';
 import { text } from './response.js';
-import {
-  orderedScreenshotScreens,
-  type ProjectRow,
-  type ScreenshotRow,
-} from './screens.js';
+import { orderedScreenshotScreens, type ProjectRow, type ScreenshotRow } from './screens.js';
 
 interface TemplateRow {
   key: string;
@@ -24,7 +20,11 @@ async function uploadPaths(paths: string[]): Promise<string[]> {
   for (const [i, p] of paths.entries()) {
     const buf = await readFile(p);
     const form = new FormData();
-    form.append('file', new Blob([buf], { type: imageMimeType(buf) }), basename(p) || `screenshot-${i + 1}.png`);
+    form.append(
+      'file',
+      new Blob([buf], { type: imageMimeType(buf) }),
+      basename(p) || `screenshot-${i + 1}.png`,
+    );
     const { asset } = await gsr.upload<{ asset: { id: string } }>('/assets', form);
     assetIds.push(asset.id);
   }
@@ -33,7 +33,9 @@ async function uploadPaths(paths: string[]): Promise<string[]> {
 
 async function pickTemplateKey(requested?: string): Promise<string> {
   if (requested && requested !== 'random') return requested;
-  const { templates } = await gsr.get<{ templates: TemplateRow[] }>('/templates?kind=store_screenshot');
+  const { templates } = await gsr.get<{ templates: TemplateRow[] }>(
+    '/templates?kind=store_screenshot',
+  );
   const choices = templates.filter((t) => !t.locked);
   if (!choices.length) throw new Error('No unlocked templates available.');
   if (requested === 'random') {
@@ -48,10 +50,7 @@ export function registerBootstrapTools(server: McpServer): void {
     'Inspect a local mobile app repository and infer stack, app name, platforms, locales, and ' +
       'marketing-relevant screens (tabs/routes). Use before bootstrap_store_project.',
     {
-      appRootPath: z
-        .string()
-        .min(1)
-        .describe('Absolute or relative path to the app repo root'),
+      appRootPath: z.string().min(1).describe('Absolute or relative path to the app repo root'),
     },
     async ({ appRootPath }) => {
       const detection = await detectApp(appRootPath);
@@ -148,10 +147,7 @@ export function registerBootstrapTools(server: McpServer): void {
         .optional()
         .describe('Explicit local PNG paths — skips discover_screenshots when set'),
       maxScreenshots: z.number().int().min(1).max(7).optional(),
-      locale: z
-        .string()
-        .optional()
-        .describe('When auto-discovering, prefer this locale subfolder'),
+      locale: z.string().optional().describe('When auto-discovering, prefer this locale subfolder'),
     },
     async ({
       appRootPath,
@@ -200,11 +196,7 @@ export function registerBootstrapTools(server: McpServer): void {
       const screens = ordered.map((shot, i) => ({
         screenIndex: i + 1,
         screenshotId: shot.id,
-        suggestedSource:
-          detection.screens[i]?.label ??
-          paths[i]
-            ? basename(paths[i]!)
-            : null,
+        suggestedSource: (detection.screens[i]?.label ?? paths[i]) ? basename(paths[i]!) : null,
         textLayers: listTextLayers(shot.design),
       }));
 

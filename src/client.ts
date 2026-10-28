@@ -110,6 +110,16 @@ export const gsr = {
       },
       JSON_TIMEOUT_MS,
     ),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(
+      path,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      },
+      JSON_TIMEOUT_MS,
+    ),
   delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }, JSON_TIMEOUT_MS),
   // No Content-Type here on purpose — fetch sets the multipart boundary
   // itself when the body is a FormData instance.

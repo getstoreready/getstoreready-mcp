@@ -154,9 +154,7 @@ async function detectName(root: string, stack: AppStack): Promise<string | null>
 
   const plist = await readText(join(root, 'ios/Runner/Info.plist'));
   if (plist) {
-    const display = plist.match(
-      /<key>CFBundleDisplayName<\/key>\s*<string>([^<]+)<\/string>/,
-    )?.[1];
+    const display = plist.match(/<key>CFBundleDisplayName<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
     if (display) return display;
     const name = plist.match(/<key>CFBundleName<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
     if (name) return name;
@@ -188,7 +186,9 @@ async function detectLocales(root: string): Promise<string[]> {
     const raw = await readText(xcstrings);
     if (raw) {
       try {
-        const j = JSON.parse(raw) as { strings?: Record<string, { localizations?: Record<string, unknown> }> };
+        const j = JSON.parse(raw) as {
+          strings?: Record<string, { localizations?: Record<string, unknown> }>;
+        };
         for (const entry of Object.values(j.strings ?? {})) {
           for (const code of Object.keys(entry.localizations ?? {})) locales.push(code);
         }
@@ -302,9 +302,21 @@ async function detectScreens(root: string, stack: AppStack): Promise<DetectedScr
   return screens.slice(0, 12);
 }
 
-async function walkCode(dir: string, onFile: (path: string) => Promise<void>, depth = 0): Promise<void> {
+async function walkCode(
+  dir: string,
+  onFile: (path: string) => Promise<void>,
+  depth = 0,
+): Promise<void> {
   if (depth > 6) return;
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', '.dart_tool', 'Pods', 'DerivedData']);
+  const skip = new Set([
+    'node_modules',
+    '.git',
+    'build',
+    'dist',
+    '.dart_tool',
+    'Pods',
+    'DerivedData',
+  ]);
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
   for (const e of entries) {
     if (skip.has(e.name)) continue;
@@ -331,7 +343,11 @@ function localeFromPath(rel: string): string | null {
   return null;
 }
 
-async function collectImages(dir: string, root: string, out: DiscoveredScreenshot[]): Promise<void> {
+async function collectImages(
+  dir: string,
+  root: string,
+  out: DiscoveredScreenshot[],
+): Promise<void> {
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
   for (const e of entries) {
     const abs = join(dir, e.name);
@@ -371,7 +387,8 @@ export async function detectApp(rootPath: string): Promise<AppDetection> {
   }
 
   const bundleId = await detectBundleId(root, stack);
-  if (!bundleId) notes.push('Bundle id / package name not found — simulator launch may need a manual open.');
+  if (!bundleId)
+    notes.push('Bundle id / package name not found — simulator launch may need a manual open.');
 
   return { rootPath: root, stack, name, platforms, bundleId, locales, screens, notes };
 }
