@@ -4,7 +4,7 @@ import type { DesignLike } from './design-utils.js';
 export interface ScreenshotRow {
   id: string;
   order: number;
-  kind: 'screenshot' | 'feature_graphic';
+  kind: 'screenshot' | 'feature_graphic' | 'app_store_header' | 'app_store_search';
   templateKey?: string | null;
   design?: DesignLike | null;
   /** When this locale's design last changed (API echoes it for conflict checks). */

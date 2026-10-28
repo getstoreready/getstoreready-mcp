@@ -53,9 +53,31 @@ const screenRef = {
     .boolean()
     .optional()
     .describe('Target the Play feature graphic instead of a screenshot'),
+  asset: z
+    .enum(['feature_graphic', 'app_store_header', 'app_store_search'])
+    .optional()
+    .describe(
+      'Target a banner asset instead of a screenshot: Play feature graphic (1024×500), App Store ' +
+        'product page header (3840×1646, 21:9) or App Store search results asset (3840×2560, 3:2)',
+    ),
 };
 
-type ScreenRefInput = { screenIndex?: number; screenshotId?: string; featureGraphic?: boolean };
+/** Banner-like assets: one canvas each, rendered into its own fixed slot
+ * (mirrors BANNER_KIND_SLOT in @gsr/shared). */
+const BANNER_KIND_SLOT = {
+  feature_graphic: 'feature-graphic',
+  app_store_header: 'app-store-header',
+  app_store_search: 'app-store-search',
+} as const;
+type BannerKind = keyof typeof BANNER_KIND_SLOT;
+const BANNER_SLOTS = new Set<string>(Object.values(BANNER_KIND_SLOT));
+
+type ScreenRefInput = {
+  screenIndex?: number;
+  screenshotId?: string;
+  featureGraphic?: boolean;
+  asset?: BannerKind;
+};
 
 function pickScreen(screenshots: ScreenshotRow[], ref: ScreenRefInput): ScreenshotRow {
   if (ref.screenshotId) {
@@ -63,13 +85,12 @@ function pickScreen(screenshots: ScreenshotRow[], ref: ScreenRefInput): Screensh
     if (!s) throw new Error(`No screen with screenshotId ${ref.screenshotId} on this project.`);
     return s;
   }
-  if (ref.featureGraphic) {
-    const fg = screenshots.find((x) => x.kind === 'feature_graphic');
-    if (!fg)
-      throw new Error(
-        'This project has no feature graphic yet — add_screen with kind "feature_graphic".',
-      );
-    return fg;
+  const asset = ref.asset ?? (ref.featureGraphic ? 'feature_graphic' : undefined);
+  if (asset) {
+    const found = screenshots.find((x) => x.kind === asset);
+    if (!found)
+      throw new Error(`This project has no ${asset} yet — add_screen with kind "${asset}".`);
+    return found;
   }
   if (!ref.screenIndex) throw new Error('Pass screenIndex, screenshotId or featureGraphic.');
   const screens = orderedScreenshotScreens(screenshots);
@@ -93,7 +114,7 @@ async function loadScreen(projectId: string, ref: ScreenRefInput, locale?: strin
 }
 
 function screenIndexOf(screenshots: ScreenshotRow[], shot: ScreenshotRow): number | null {
-  if (shot.kind === 'feature_graphic') return null;
+  if (shot.kind !== 'screenshot') return null;
   return orderedScreenshotScreens(screenshots).findIndex((s) => s.id === shot.id) + 1;
 }
 
@@ -287,10 +308,10 @@ async function renderPreviews(
 }
 
 async function designSlots(projectId: string, shot: ScreenshotRow): Promise<string[]> {
-  if (shot.kind === 'feature_graphic') return ['feature-graphic'];
+  if (shot.kind !== 'screenshot') return [BANNER_KIND_SLOT[shot.kind as BannerKind]];
   const project = await fetchProject(projectId);
   const enabled = (project.enabledDeviceSlots ?? []).filter(
-    (s) => s !== 'feature-graphic' && s !== 'app-icon',
+    (s) => !BANNER_SLOTS.has(s) && s !== 'app-icon',
   );
   return enabled.length ? enabled : ['iphone-6.3'];
 }
@@ -608,7 +629,13 @@ export function registerDesignTools(server: McpServer): void {
       '(copyFromScreenIndex), or with a full design.',
     {
       projectId: z.string().min(1),
-      kind: z.enum(['screenshot', 'feature_graphic']).default('screenshot'),
+      kind: z
+        .enum(['screenshot', 'feature_graphic', 'app_store_header', 'app_store_search'])
+        .default('screenshot')
+        .describe(
+          'screenshot, or a banner asset: feature_graphic (Play 1024×500), app_store_header ' +
+            '(3840×1646) or app_store_search (3840×2560)',
+        ),
       position: z.number().int().min(1).optional().describe('1-based position (default: last)'),
       templateKey: z.string().optional(),
       copyFromScreenIndex: z.number().int().min(1).optional(),
