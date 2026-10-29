@@ -1,18 +1,12 @@
 #!/usr/bin/env node
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerBootstrapTools } from './tools-bootstrap.js';
-import { registerDesignTools } from './tools-design.js';
-import { registerStorePushTools } from './tools-store-push.js';
-import { registerStoreSetupTools } from './tools-store-setup.js';
-import { registerTools } from './tools.js';
-
-const server = new McpServer({ name: 'gsr-mcp', version: '0.10.0' });
-registerTools(server);
-registerBootstrapTools(server);
-registerDesignTools(server);
-registerStorePushTools(server);
-registerStoreSetupTools(server);
-
-const transport = new StdioServerTransport();
-await server.connect(transport);
+// Both branches import lazily: client.ts reads GSR_MCP_REMOTE when it loads,
+// so the flag must be set before anything pulls it in.
+if (process.argv.includes('--http')) {
+  // Hosted remote server (Claude / ChatGPT connectors) — see http.ts.
+  process.env.GSR_MCP_REMOTE = '1';
+  await import('./http.js');
+} else {
+  const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
+  const { createServer } = await import('./server.js');
+  await createServer().connect(new StdioServerTransport());
+}

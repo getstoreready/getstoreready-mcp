@@ -10,25 +10,40 @@ export ZIPs, and more from an MCP-capable AI client (Claude, Cursor, Codex,
 Gemini, …).</p>
 
 ---
-## 1. Get an API key
+## Two ways to connect
 
-Create one at **[getstoreready.com/profile/api-keys](https://getstoreready.com/profile/api-keys)**
-(you'll need a GetStoreReady account). The token is shown once — copy it
-somewhere safe.
+### A. Hosted connector (no install)
 
-## 2. Add it to your MCP client
+Add **`https://api.getstoreready.com/mcp`** as a custom connector / remote MCP
+server. The first time, your AI app opens getstoreready.com — sign up or log in,
+click **Allow**, done. No API key to copy.
 
-Every client below runs the same command:
+- **Claude (web / desktop):** Settings → Connectors → Add custom connector → paste the URL.
+- **Claude Code:** `claude mcp add --transport http getstoreready https://api.getstoreready.com/mcp`
+- **ChatGPT, Cursor, others:** add it as a remote / Streamable HTTP MCP server.
+
+The hosted connector can't see your computer, so the local-only tools
+(`detect_app`, `capture_screenshots`, `bootstrap_store_project`, upload by file
+path, saving a store key from a file) are only in the local server below.
+
+### B. Local server (simulator capture, local files)
+
+Every client below runs the same command. **No API key needed** — ask your
+agent to "sign in to GetStoreReady": the `sign_in` tool opens
+getstoreready.com/connect with a short code, you sign up or log in and click
+**Allow**, and the key is saved to `~/.config/getstoreready/credentials.json`.
 
 ```json
 {
   "command": "npx",
-  "args": ["-y", "github:getstoreready/getstoreready-mcp"],
-  "env": {
-    "GSR_API_KEY": "gsr_live_your_key_here"
-  }
+  "args": ["-y", "github:getstoreready/getstoreready-mcp"]
 }
 ```
+
+Prefer a fixed key (CI, scripts)? Create one at
+**[getstoreready.com/profile/api-keys](https://getstoreready.com/profile/api-keys)**
+and set it as `GSR_API_KEY` in the server's `env` — it takes precedence over
+`sign_in`. The examples below show that optional `env` block.
 
 ### Claude Code
 
@@ -38,7 +53,7 @@ Project-scoped (shared via `.mcp.json` committed to a repo):
 claude mcp add getstoreready --scope project -- npx -y github:getstoreready/getstoreready-mcp
 ```
 
-Then set `GSR_API_KEY` in your environment, or add it directly to the
+Optionally set `GSR_API_KEY` in your environment (otherwise use `sign_in`), or add it to the
 generated `.mcp.json`:
 
 ```json
@@ -118,6 +133,16 @@ Add to `~/.gemini/settings.json`:
 ```
 
 ## Tools
+
+### Account & billing
+
+| Tool | What it does |
+|---|---|
+| `sign_in` | Browser sign-in / sign-up (local server only) — no password or key in the chat |
+| `sign_out` | Forget the saved key on this machine (local server only) |
+| `get_account` | Signed-in email, plan, AI credit balance |
+| `list_plans` | Plans and credit packs with prices |
+| `start_checkout` | Payment link for a plan or credit pack — the user pays in their browser |
 
 ### App bootstrap (from local repo)
 
@@ -271,11 +296,19 @@ npm install
 GSR_API_KEY=... GSR_API_BASE=http://localhost:3201 GSR_SITE_URL=http://localhost:3200 npm run dev
 ```
 
+Hosted mode (what runs behind `api.getstoreready.com/mcp`):
+
+```bash
+npm run build
+PORT=3100 GSR_API_BASE=http://localhost:3201 GSR_PUBLIC_API_BASE=http://localhost:3201 node dist/index.js --http
+```
+
 ## Configuration
 
 | Env var | Required | Default |
 |---|---|---|
-| `GSR_API_KEY` | Yes | — |
+| `GSR_API_KEY` | No — or use `sign_in` | — |
+| `GSR_CREDENTIALS_PATH` | No | `~/.config/getstoreready/credentials.json` |
 | `GSR_API_BASE` | No | `https://api.getstoreready.com` |
 | `GSR_SITE_URL` | No | `https://getstoreready.com` |
 

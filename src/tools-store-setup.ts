@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { editorUrl, gsr } from './client.js';
+import { assertLocalFiles, editorUrl, gsr, siteUrl } from './client.js';
 import { text } from './response.js';
 
 // Store connection + project language management — everything the project
@@ -15,6 +15,10 @@ const store = z.enum(['app_store', 'google_play']);
 const base = (s: z.infer<typeof store>) => (s === 'app_store' ? 'app-store' : 'google-play');
 
 async function readSecretFile(path: string): Promise<string> {
+  assertLocalFiles(
+    'Saving a store key',
+    `Add it on the web instead: ${siteUrl('/store-connections')}.`,
+  );
   const full = resolve(path.replace(/^~(?=$|\/)/, homedir()));
   const content = (await readFile(full, 'utf8')).trim();
   if (!content) throw new Error(`${full} is empty.`);

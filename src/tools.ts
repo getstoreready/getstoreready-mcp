@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiBase, assetUrl, editorUrl, gsr, imageMimeType } from './client.js';
+import { apiBase, assertLocalFiles, assetUrl, editorUrl, gsr, imageMimeType } from './client.js';
 import {
   cloneDesign,
   deviceAssetId,
@@ -276,6 +276,7 @@ export function registerTools(server: McpServer): void {
         let buf: Buffer;
         let name = img.filename;
         if (img.path) {
+          assertLocalFiles('Uploading by "path"', 'Pass the image as base64 "data" instead.');
           buf = await readFile(img.path);
           name ??= basename(img.path);
         } else {
@@ -697,6 +698,7 @@ export function registerTools(server: McpServer): void {
         .describe('Local path to save the ZIP when wait=true (e.g. /tmp/export.zip)'),
     },
     async ({ projectId, locales, slots, wait, savePath }) => {
+      if (savePath) assertLocalFiles('"savePath"', 'Omit it and use the returned downloadUrl.');
       const project = await fetchProject(projectId);
       const exportLocales = locales ??
         project.storeLocales?.map((l) => l.languageCode) ?? [project.defaultStoreLanguage];
